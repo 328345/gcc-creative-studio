@@ -11,17 +11,37 @@ steps:
     args:
       - '-c'
       - |
-        sed -i "s#BACKEND_URL_PLACEHOLDER#$${_BACKEND_URL}/api#g" src/environments/environment.prod.ts
-        sed -i "s#GOOGLE_CLIENT_ID_PLACEHOLDER#$${GOOGLE_CLIENT_ID}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_API_KEY_PLACEHOLDER#$${FIREBASE_API_KEY}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_AUTH_DOMAIN_PLACEHOLDER#$${FIREBASE_AUTH_DOMAIN}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_PROJECT_ID_PLACEHOLDER#$${FIREBASE_PROJECT_ID}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_STORAGE_BUCKET_PLACEHOLDER#$${FIREBASE_STORAGE_BUCKET}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_SENDER_ID_PLACEHOLDER#$${FIREBASE_MESSAGING_SENDER_ID}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_APP_ID_PLACEHOLDER#$${FIREBASE_APP_ID}#g" src/environments/environment.prod.ts
-        sed -i "s#FIREBASE_MEASUREMENT_ID_PLACEHOLDER#$${FIREBASE_MEASUREMENT_ID}#g" src/environments/environment.prod.ts
-        sed -i "s#SITE_ID_PLACEHOLDER#${_FIREBASE_SITE_ID}#g" firebase.json
-        sed -i "s#BACKEND_SERVICE_ID_PLACEHOLDER#$${_BACKEND_SERVICE_ID}#g" firebase.json
+        python3 -c "
+        import os, re
+
+        replacements = {
+          'BACKEND_URL_PLACEHOLDER': os.environ.get('_BACKEND_URL','') + '/api',
+          'GOOGLE_CLIENT_ID_PLACEHOLDER': os.environ.get('GOOGLE_CLIENT_ID',''),
+          'FIREBASE_API_KEY_PLACEHOLDER': os.environ.get('FIREBASE_API_KEY',''),
+          'FIREBASE_AUTH_DOMAIN_PLACEHOLDER': os.environ.get('FIREBASE_AUTH_DOMAIN',''),
+          'FIREBASE_PROJECT_ID_PLACEHOLDER': os.environ.get('FIREBASE_PROJECT_ID',''),
+          'FIREBASE_STORAGE_BUCKET_PLACEHOLDER': os.environ.get('FIREBASE_STORAGE_BUCKET',''),
+          'FIREBASE_SENDER_ID_PLACEHOLDER': os.environ.get('FIREBASE_MESSAGING_SENDER_ID',''),
+          'FIREBASE_APP_ID_PLACEHOLDER': os.environ.get('FIREBASE_APP_ID',''),
+          'FIREBASE_MEASUREMENT_ID_PLACEHOLDER': os.environ.get('FIREBASE_MEASUREMENT_ID',''),
+        }
+
+        with open('src/environments/environment.prod.ts', 'r') as f:
+          content = f.read()
+        for k, v in replacements.items():
+          content = content.replace(k, v)
+        with open('src/environments/environment.prod.ts', 'w') as f:
+          f.write(content)
+
+        with open('firebase.json', 'r') as f:
+          content = f.read()
+        content = content.replace('SITE_ID_PLACEHOLDER', os.environ.get('_FIREBASE_SITE_ID',''))
+        content = content.replace('BACKEND_SERVICE_ID_PLACEHOLDER', os.environ.get('_BACKEND_SERVICE_ID',''))
+        with open('firebase.json', 'w') as f:
+          f.write(content)
+
+        print('Injection complete')
+        "
     dir: frontend
     env:
       - '_BACKEND_URL=${_BACKEND_URL}'
