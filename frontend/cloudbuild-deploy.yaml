@@ -7,41 +7,40 @@ steps:
 
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Inject Environment Variables'
-    entrypoint: 'bash'
+    entrypoint: 'python3'
     args:
       - '-c'
       - |
-        python3 -c "
-        import os, re
+        import os
 
-        replacements = {
-          'BACKEND_URL_PLACEHOLDER': os.environ.get('_BACKEND_URL','') + '/api',
-          'GOOGLE_CLIENT_ID_PLACEHOLDER': os.environ.get('GOOGLE_CLIENT_ID',''),
-          'FIREBASE_API_KEY_PLACEHOLDER': os.environ.get('FIREBASE_API_KEY',''),
-          'FIREBASE_AUTH_DOMAIN_PLACEHOLDER': os.environ.get('FIREBASE_AUTH_DOMAIN',''),
-          'FIREBASE_PROJECT_ID_PLACEHOLDER': os.environ.get('FIREBASE_PROJECT_ID',''),
-          'FIREBASE_STORAGE_BUCKET_PLACEHOLDER': os.environ.get('FIREBASE_STORAGE_BUCKET',''),
-          'FIREBASE_SENDER_ID_PLACEHOLDER': os.environ.get('FIREBASE_MESSAGING_SENDER_ID',''),
-          'FIREBASE_APP_ID_PLACEHOLDER': os.environ.get('FIREBASE_APP_ID',''),
-          'FIREBASE_MEASUREMENT_ID_PLACEHOLDER': os.environ.get('FIREBASE_MEASUREMENT_ID',''),
+        def inject(filepath, replacements):
+            with open(filepath, 'r') as f:
+                content = f.read()
+            for k, v in replacements.items():
+                content = content.replace(k, v)
+            with open(filepath, 'w') as f:
+                f.write(content)
+
+        env_replacements = {
+            'FIREBASE_API_KEY_PLACEHOLDER': os.environ['FIREBASE_API_KEY'],
+            'FIREBASE_AUTH_DOMAIN_PLACEHOLDER': os.environ['FIREBASE_AUTH_DOMAIN'],
+            'FIREBASE_PROJECT_ID_PLACEHOLDER': os.environ['FIREBASE_PROJECT_ID'],
+            'FIREBASE_STORAGE_BUCKET_PLACEHOLDER': os.environ['FIREBASE_STORAGE_BUCKET'],
+            'FIREBASE_SENDER_ID_PLACEHOLDER': os.environ['FIREBASE_MESSAGING_SENDER_ID'],
+            'FIREBASE_APP_ID_PLACEHOLDER': os.environ['FIREBASE_APP_ID'],
+            'FIREBASE_MEASUREMENT_ID_PLACEHOLDER': os.environ['FIREBASE_MEASUREMENT_ID'],
+            'BACKEND_URL_PLACEHOLDER': os.environ['_BACKEND_URL'] + '/api',
+            'GOOGLE_CLIENT_ID_PLACEHOLDER': os.environ['GOOGLE_CLIENT_ID'],
         }
 
-        with open('src/environments/environment.prod.ts', 'r') as f:
-          content = f.read()
-        for k, v in replacements.items():
-          content = content.replace(k, v)
-        with open('src/environments/environment.prod.ts', 'w') as f:
-          f.write(content)
+        firebase_replacements = {
+            'SITE_ID_PLACEHOLDER': os.environ['_FIREBASE_SITE_ID'],
+            'BACKEND_SERVICE_ID_PLACEHOLDER': os.environ['_BACKEND_SERVICE_ID'],
+        }
 
-        with open('firebase.json', 'r') as f:
-          content = f.read()
-        content = content.replace('SITE_ID_PLACEHOLDER', os.environ.get('_FIREBASE_SITE_ID',''))
-        content = content.replace('BACKEND_SERVICE_ID_PLACEHOLDER', os.environ.get('_BACKEND_SERVICE_ID',''))
-        with open('firebase.json', 'w') as f:
-          f.write(content)
-
+        inject('src/environments/environment.prod.ts', env_replacements)
+        inject('firebase.json', firebase_replacements)
         print('Injection complete')
-        "
     dir: frontend
     env:
       - '_BACKEND_URL=${_BACKEND_URL}'
